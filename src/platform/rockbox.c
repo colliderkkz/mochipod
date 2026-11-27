@@ -60,11 +60,19 @@ static bool commit_pet(const Pet *candidate)
     return true;
 }
 static bool persist(void) { return commit_pet(&pet); }
+#if defined(ASTRAPOD_PLUGIN_H) && defined(ASTRAPOD_ROCK_TRAY_H)
+#include "tray.inc"
+#else
+#define tray_sync(p,on_exit) ((void)0)
+#define tray_after_input(p) ((void)0)
+#define tray_after_tick(p,event) ((void)0)
+#endif
 
 static void on_system_exit(void *ignored)
 {
     (void)ignored;
     if (!persist()) rb->splash(HZ,"MochiPod: save failed");
+    else tray_sync(&pet,true);
 }
 
 #if LCD_WIDTH != LCD_COLS || LCD_HEIGHT != LCD_ROWS
@@ -183,6 +191,7 @@ static bool review_clock(enum plugin_status *stop)
         if (key==BUTTON_MENU) {
             if (choice) { choice=0; continue; }
             *stop=PLUGIN_OK;
+            tray_sync(&pet,true);
             return false;
         }
         if (!clock_can_resume(now,sec)) continue;
@@ -208,6 +217,7 @@ static bool review_clock(enum plugin_status *stop)
             live_anchor=(ClockAnchor){now*60+sec,accepted_tick};
             previous_second=now*60+sec;
             pet=candidate;
+            tray_sync(&pet,false);
             return true;
         }
     }
@@ -233,6 +243,7 @@ static bool update_time(bool startup,bool trusted,enum plugin_status *stop)
         }
     }
     if (issue) {
+        tray_sync(&pet,false);
         if (!review_clock(stop)) return false;
         /* Rebase/count was committed to the minute and second confirmed in the dialog.
            Recheck the next RTC read against that decision rather than trusting a new sample. */
@@ -289,6 +300,7 @@ enum plugin_status plugin_start(const void *parameter)
     if (serial==before_review && !persist()) {
         rb->splash(2*HZ,"Cannot write save"); return PLUGIN_ERROR;
     }
+    tray_sync(&pet,false);
     Ui ui;
     ui_start(&ui);
     ui_growth(&ui,&pet,previous);
@@ -314,9 +326,11 @@ enum plugin_status plugin_start(const void *parameter)
             bool playing=ui.page==PLAYING && !ui.play.done;
             ui_tick(&ui,&pet);
             bool proposal_shown=before_tick.page!=OFFER && ui.page==OFFER;
-            if ((previous_phase!=pet.family.phase || proposal_shown || (playing && ui.play.done)) && !persist()) {
+            bool event=previous_phase!=pet.family.phase || proposal_shown || (playing && ui.play.done);
+            if (event && !persist()) {
                 rb->splash(HZ,"Cannot save progress");return PLUGIN_ERROR;
             }
+            tray_after_tick(&pet,event);
             enum Cue cue=feedback_change(before_tick,&pet,&ui,CMD_NONE);
             if (cue!=SILENT) sound=(Sound){cue,0};
             if (pet.muted) sound=(Sound){0};
@@ -362,13 +376,14 @@ enum plugin_status plugin_start(const void *parameter)
             if ((phase_before_input!=pet.family.phase || rb->memcmp(&before_action,&pet,sizeof pet)) && !persist()) {
                 rb->splash(HZ,"Cannot save progress");return PLUGIN_ERROR;
             }
+            tray_after_input(&pet);
             if (ui.mode!=before && !store_mode(ui.mode)) {
                 ui.mode=before;
                 rb->splash(HZ,"Cannot save controls");invalidate_lcd=true;
             }
             if (!ui.exit_requested) {paint(&ui);redraw=false;}
             if (ui.exit_requested) {
-                if (persist()) return PLUGIN_OK;
+                if (persist()) { tray_sync(&pet,true); return PLUGIN_OK; }
                 ui.exit_requested=false;
                 rb->splash(HZ,"Save failed; try again");invalidate_lcd=true;
             }
