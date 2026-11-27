@@ -511,7 +511,8 @@ void draw_frame(Display *d,const Pet *p,const Ui *u)
             other=p->family.mate;
             actor_as(d,p,other,HAPPY_POSE,u->frame,194,85,3);
             centered(d,136,v3_characters[other].name,2);
-            centered(d,157,u->choice?"Love?  YES":"Love?  NO",2);
+            centered(d,155,"Love?",2);
+            centered(d,175,"Center: Yes  MENU: No",2);
         } else if (u->page==WEDDING && u->frames>24) {
             centered(d,54,"Wedding",3);other=p->family.mate;
             if (!sheet_pose(d,p->character,SP_KISSING,0,75+beat*5,101,4,60,false))
@@ -570,7 +571,8 @@ void draw_frame(Display *d,const Pet *p,const Ui *u)
         value_line(d,53,"Given",p->shop.donated);value_line(d,91,"Entry",u->amount);
         value_line(d,130,"Digit",u->choice);break;
     case DONATE_ASK:
-        value_line(d,67,"Give",u->amount);centered(d,124,u->choice?"Yes":"Cancel",3);break;
+        value_line(d,67,"Give",u->amount);
+        centered(d,118,"Center: Yes",3);centered(d,152,"MENU: No",3);break;
     case CLERK: {
         unsigned item=shelf_item(p,0);
         unsigned sale=shelf_price(p,item)<goods_prices[item]?2:0;
@@ -591,7 +593,8 @@ void draw_frame(Display *d,const Pet *p,const Ui *u)
     case CLAIM: {
         unsigned id=code_reward(p,u->code);
         centered(d,54,id<GOODS_COUNT?goods_names[id]:souvenir_names[id-GOODS_COUNT],2);
-        value_line(d,91,"Price",code_price(p,u->code));centered(d,139,u->choice?"Accept":"Cancel",3);break;
+        value_line(d,84,"Price",code_price(p,u->code));
+        centered(d,128,"Center: Yes",3);centered(d,162,"MENU: No",3);break;
     }
     case SOUVENIRS: {
         char receipt[11];
@@ -650,7 +653,8 @@ void draw_frame(Display *d,const Pet *p,const Ui *u)
         break;
     case EXIT_ASK: case HATCH_ASK: case REPLACE_ASK:
         centered(d,68,u->page==EXIT_ASK?"Save and exit?":u->page==HATCH_ASK?"Start new game?":"Replace this pet?",3);
-        centered(d,127,u->choice?"Yes":"Cancel",4);
+        centered(d,118,"Center: Yes",3);
+        centered(d,152,"MENU: No",3);
         break;
     case DISPLAY_TEST: draw_display_test(d,u->choice,u->frame); return;
     case TITLE:

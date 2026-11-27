@@ -17,6 +17,7 @@ suites={
     "hatching": ["src/storage/save.c"],
     "core": ["src/storage/save.c","src/render/lcd.c"],
     "wheel": ["src/input/wheel.c"],
+    "prompts": ["-DMOCHI_LAYOUT_TEST","src/input/wheel.c","src/render/lcd.c"],
     "display": ["-DMOCHI_LAYOUT_TEST","src/render/lcd.c"],
 }
 flags=["-std=c99","-O2","-Wall","-Wextra","-Werror","-pedantic"]

@@ -149,7 +149,6 @@ int main(int argc,char **argv)
         save_pack(next,&pet,seq);assert(!memcmp(next+8,old+8,sizeof old-12));
         Ui view;ui_start(&view);view.page=HOME;ui_tick(&view,&pet);
         assert(view.page==OFFER && pet.journal.seen[pet.family.mate/32]&(1u<<(pet.family.mate%32)));
-        ui_command(&view,&pet,CMD_NEXT);
         Feedback before=feedback_sample(&pet,&view);
         ui_command(&view,&pet,CMD_OK);
         assert(feedback_change(before,&pet,&view,CMD_OK)==MARRY_TONE);
