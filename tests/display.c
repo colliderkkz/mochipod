@@ -102,7 +102,7 @@ int main(int argc,char **argv)
         ui.message=notices[i]; page(NOTICE,0); sample("notice",i);
     }
     pet.stage=DEAD;
-    const enum Page menus[]={OPTIONS,SETTINGS,INPUT_MODE,EXIT_ASK,HATCH_ASK};
+    const enum Page menus[]={OPTIONS,SETTINGS,INPUT_MODE};
     for (unsigned m=0;m<sizeof(menus)/sizeof(*menus);++m) {
         ui.page=menus[m];
         for (int choice=0;choice<ui_count(&ui,&pet);++choice) page(menus[m],choice);

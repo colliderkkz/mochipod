@@ -42,7 +42,7 @@ static void wheel_test(void)
     click(CLICK_MENU); assert(u.page==HOME && u.icon==IC_STATUS);
     send(CLICK_MENU,PRESSED); send(CLICK_MENU,REPEATED); send(CLICK_MENU,REPEATED);
     send(CLICK_MENU,RELEASED); assert(u.page==EXIT_ASK && !u.exit_requested && u.depth==1);
-    click(CLICK_CENTER); assert(u.page==HOME);
+    click(CLICK_MENU); assert(u.page==HOME && !u.exit_requested);
     click(CLICK_PLAY); assert(u.page==STATUS);
     click(CLICK_MENU); assert(u.page==HOME);
 }

@@ -22,12 +22,11 @@ def key(name):
     subprocess.run(["xdotool", "keyup", name], check=True)
     time.sleep(.22)
 
-def quit_plugin(classic=False):
+def quit_plugin():
     subprocess.run(["xdotool","keydown","Escape"],check=True)
     time.sleep(1.2)
     subprocess.run(["xdotool","keyup","Escape"],check=True)
     time.sleep(.2)
-    key("Left" if classic else "Down")
     key("Return")
 
 def settings():
@@ -182,7 +181,7 @@ with tempfile.TemporaryDirectory() as temp:
                     for _ in range(min(steps,10-steps)):key("Down" if steps<=5 else "Up")
                     key("Return")
                 capture(root,"souvenir-claim.bmp")
-                key("Down");key("Return")
+                key("Return")
                 assert records(root)[-1][0][122] & (1<<10)
                 quit_plugin();key("Return");time.sleep(2)
                 assert records(root)[-1][0][122] & (1<<10) and offer_path.read_bytes()==record
@@ -250,7 +249,7 @@ with tempfile.TemporaryDirectory() as temp:
                 sys.exit(0)
             if offer_file:
                 time.sleep(1)
-                key("Down");key("Return")
+                key("Return")
                 capture(root,"live-wedding.bmp")
                 assert records(root)[-1][0][50]==2
                 time.sleep(3.2);capture(root,"live-birth.bmp")
@@ -264,7 +263,7 @@ with tempfile.TemporaryDirectory() as temp:
                 for letter in "ACBBBACC":
                     for _ in range(ord(letter)-ord("A")):key("Down")
                     key("Return")
-                capture(root,"shop-claim.bmp");key("Down");key("Return")
+                capture(root,"shop-claim.bmp");key("Return")
                 assert records(root)[-1][0][121]&2
                 if v<12: assert offer_path.read_bytes()==record
                 quit_plugin();key("Return");time.sleep(2)
@@ -442,7 +441,7 @@ with tempfile.TemporaryDirectory() as temp:
             key("Return"); key("Down"); key("Return")
             marker=root/".rockbox/rocks/games/mochipod-classic.cfg"
             assert marker.is_file(),"Classic preference was not written"
-            quit_plugin(classic=True)
+            quit_plugin()
             restored=records(root)[-1][0]
             assert restored[6]==1 and restored[8]==6 and restored[16]==1,restored
             # Keep feeding through the original A/B/C keys after a fresh plugin load.
@@ -450,7 +449,7 @@ with tempfile.TemporaryDirectory() as temp:
             key("Return")
             time.sleep(2)
             key("Left"); key("Left"); key("Return"); key("Return"); key("Return")
-            quit_plugin(classic=True)
+            quit_plugin()
             assert records(root)[-1][0][8]==7,"Classic controls or recovery failed"
             key("Return"); time.sleep(2)
             key("Escape"); key("Left"); key("Return"); key("Return")

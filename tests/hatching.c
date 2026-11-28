@@ -75,13 +75,14 @@ static void new_game_confirmation(void)
     ui_command(&u,&p,CMD_BACK);
     ui_command(&u,&p,CMD_PREV);
     ui_command(&u,&p,CMD_OK);
-    assert(u.page==HATCH_ASK && !u.choice);
-    ui_command(&u,&p,CMD_NEXT); ui_command(&u,&p,CMD_OK);
-    assert(u.page==REPLACE_ASK && !u.choice);
+    assert(u.page==HATCH_ASK);
     ui_command(&u,&p,CMD_OK);
-    assert(!memcmp(&original,&p,sizeof p));
-    ui_command(&u,&p,CMD_OK); /* the parent selection is Yes */
-    ui_command(&u,&p,CMD_NEXT); ui_command(&u,&p,CMD_OK);
+    assert(u.page==REPLACE_ASK);
+    ui_command(&u,&p,CMD_BACK);
+    assert(u.page==HATCH_ASK && !memcmp(&original,&p,sizeof p));
+    ui_command(&u,&p,CMD_OK);
+    assert(u.page==REPLACE_ASK);
+    ui_command(&u,&p,CMD_OK);
     assert(p.stage==EGG && p.generation==1 && p.character==V3_EGG);
     assert(p.user_name==original.user_name && p.points==0 && p.pet_name==0);
 }

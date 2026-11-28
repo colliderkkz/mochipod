@@ -33,8 +33,8 @@ static void check_secrets(void)
                     ui_command(&u,&p,CMD_OK);
                 }
             }
-            assert(u.page==CLAIM && !u.choice && u.code==i && !code_price(&p,i));
-            ui_command(&u,&p,CMD_NEXT);ui_command(&u,&p,CMD_OK);
+            assert(u.page==CLAIM && u.code==i && !code_price(&p,i));
+            ui_command(&u,&p,CMD_OK);
         }
         assert(p.shop.secrets==127 && p.points==9999 && goods_owned(&p,OWL_COSTUME)==1);
         assert(!goods_owned(&p,WHOLE_CAKE) && redeem_code(&p,6) && goods_owned(&p,WHOLE_CAKE)==1);
@@ -130,7 +130,7 @@ static void town_vectors(void)
                 for(int step=0;step<digits[d]-'0';++step) ui_command(&ui,&desk,CMD_NEXT);
                 ui_command(&ui,&desk,CMD_OK);
             }
-            assert(ui.page==CLAIM && !ui.choice);ui_command(&ui,&desk,CMD_NEXT);ui_command(&ui,&desk,CMD_OK);
+            assert(ui.page==CLAIM);ui_command(&ui,&desk,CMD_OK);
             assert(desk.shop.souvenirs&(1u<<slot));
         }
     }

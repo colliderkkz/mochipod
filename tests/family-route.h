@@ -28,7 +28,7 @@ static bool family_route(Pet *p,Ui *u,unsigned generations,bool (*capture)(Pet *
         }
         if (gen==generations) break;
         if (u->page!=OFFER || !capture(p,u,"offer")) return false;
-        ui_command(u,p,CMD_NEXT);ui_command(u,p,CMD_OK);
+        ui_command(u,p,CMD_OK);
         if (u->page!=WEDDING || !capture(p,u,"wedding")) return false;
         for (int i=0;i<25;++i) ui_tick(u,p);
         if (!capture(p,u,"birth")) return false;
