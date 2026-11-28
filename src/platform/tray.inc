@@ -1,0 +1,138 @@
+/* AstraPod status-bar tray: the pet's condition as one of four 12x12 icons.
+   The schedule is predicted by running the game rules on a copy of the
+   pet, so the icon keeps changing after MochiPod closes. All calls are
+   best effort: a full tray or USB storage never disturbs the game. */
+enum { TRAY_CONTENT, TRAY_SLEEP, TRAY_CARE, TRAY_ALERT, TRAY_FRAMES };
+#define TRAY_HORIZON (48u*60u)
+#define TRAY_EVENTS 32
+
+/* One halfword per column, bit 0 at the top. */
+static const struct rock_tray_icon12 tray_art[TRAY_FRAMES]={
+    /* content: smiling Mochi */
+    {{0x1f0,0x3ff,0x7ff,0xf9c,0xef8,0xdf8,0xdf8,0xef8,0xf9c,0x7ff,0x3ff,0x1f0}},
+    /* asleep: zZ */
+    {{0x880,0xc80,0xa80,0x980,0x003,0x0c3,0x0e3,0x0f3,0x0db,0x0cf,0x0c7,0x0c3}},
+    /* needs care: Mochi! */
+    {{0x1f8,0x3ff,0x7cf,0x77c,0x6fc,0x77c,0x7cf,0x3ff,0x1f8,0x000,0xcff,0xcff}},
+    /* sick or dead: skull */
+    {{0x0fc,0x1fe,0x7cf,0xfc7,0xdc7,0x77f,0x77f,0xdc7,0xfc7,0x7cf,0x1fe,0x0fc}},
+};
+
+static uint8_t tray_frame(const Pet *p)
+{
+    if (p->stage==DEAD) return TRAY_ALERT;
+    if (p->setup>=8) return TRAY_CARE;
+    if (p->character==V3_EGG) return TRAY_CONTENT;
+    bool asleep=pet_sleeping(p);
+    /* Medicine cannot be given asleep, so sickness shows from wake time. */
+    if (!asleep && (p->illness || p->family.child_doses)) return TRAY_ALERT;
+    if (asleep && p->character!=V3_LEGACY && !p->dark && !p->sleep_ack &&
+        p->light_wait<60) return TRAY_CARE;
+    if (p->family.phase==VISIT ||
+        (p->family.phase==HANDOVER && !p->family.event_age)) return TRAY_CARE;
+    if (!asleep && (!p->hunger || !p->happy || p->call || p->mess))
+        return TRAY_CARE;
+    if (asleep || p->family.phase==HANDOVER) return TRAY_SLEEP;
+    return TRAY_CONTENT;
+}
+
+/* Keep the first change and the last state; drop the shortest middle
+   state, merging the neighbours it separated, until the rules fit. */
+static unsigned tray_compress(struct rock_tray_rule *e,unsigned n)
+{
+    while (n>ROCK_TRAY_MAX_RULES) {
+        unsigned best=1;
+        for (unsigned i=2;i+1<n;++i)
+            if (e[i+1].delay_seconds-e[i].delay_seconds<=
+                e[best+1].delay_seconds-e[best].delay_seconds) best=i;
+        unsigned drop=e[best+1].frame==e[best-1].frame ? 2 : 1;
+        for (unsigned i=best;i+drop<n;++i) e[i]=e[i+drop];
+        n-=drop;
+    }
+    return n;
+}
+
+static unsigned tray_predict(const Pet *p,unsigned second,struct rock_tray_rule *e)
+{
+    static Pet sim; /* about 1 KiB: off the plugin stack */
+    unsigned n=0;
+    uint8_t current=tray_frame(p);
+    if (p->character==V3_EGG) {
+        unsigned left=HATCH_SECONDS-p->egg_seconds;
+        e[0]=(struct rock_tray_rule){MAX(left,ROCK_TRAY_MIN_DELAY),TRAY_CARE};
+        return 1;
+    }
+    if (p->stage==DEAD || p->setup) return 0;
+    sim=*p;
+    for (uint32_t k=1;k<=TRAY_HORIZON && sim.last<MAX_CLOCK;++k) {
+        pet_advance(&sim,sim.last+1);
+        uint8_t frame=tray_frame(&sim);
+        if (frame!=current && n<TRAY_EVENTS) {
+            uint32_t delay=k*60u-second;
+            if (!n && delay<ROCK_TRAY_MIN_DELAY) delay=ROCK_TRAY_MIN_DELAY;
+            e[n++]=(struct rock_tray_rule){delay,frame};
+            current=frame;
+        }
+        if (sim.stage==DEAD ||
+            (sim.family.phase==HANDOVER && !sim.family.event_age)) break;
+    }
+    return tray_compress(e,n);
+}
+
+/* What the schedule was predicted from, beyond the icon itself. */
+static uint32_t tray_digest(const Pet *p)
+{
+    const uint32_t fields[]={p->stage,p->character,p->setup,p->paused,
+        p->clock_hold,p->hunger,p->happy,p->mess,p->illness,p->call,p->dark,
+        p->sleep_ack,p->potty_used,p->light_wait,p->hungry_minutes,
+        p->ill_minutes,p->neglected,p->family.phase,p->family.child_doses,
+        p->family.event_age};
+    uint32_t hash=2166136261u;
+    for (unsigned i=0;i<sizeof fields/sizeof fields[0];++i)
+        hash=(hash^fields[i])*16777619u;
+    return hash;
+}
+
+static uint32_t tray_basis;
+static int tray_shown=-1;
+static void tray_sync(const Pet *p,bool on_exit)
+{
+    tray_basis=tray_digest(p);
+    bool unstarted=p->setup>=1 && p->setup<=7;
+    if (on_exit && (p->stage==DEAD || unstarted)) {
+        rb->app_tray_register(NULL,0);
+        tray_shown=-1;
+        return;
+    }
+    if (p->paused || p->clock_hold || unstarted) {
+        rb->app_tray_set(ROCK_TRAY_HIDDEN);
+        tray_shown=ROCK_TRAY_HIDDEN;
+        return;
+    }
+    static struct rock_tray_rule events[TRAY_EVENTS];
+    unsigned second;
+    current_minute(&second);
+    unsigned n=tray_predict(p,second,events);
+    uint8_t frame=tray_frame(p);
+    /* An identical registration or selection writes nothing. */
+    if (!rb->app_tray_register12(tray_art,TRAY_FRAMES) || !rb->app_tray_set(frame))
+        return;
+    tray_shown=frame;
+    if (n) rb->app_background_schedule(events,n);
+}
+
+/* After a key: resync if anything the prediction used has changed. */
+static void tray_after_input(const Pet *p)
+{
+    if (tray_digest(p)==tray_basis) return;
+    tray_sync(p,false);
+}
+/* On a frame tick the stored schedule already covers time passing; resync
+   only when the icon itself moved or the caller saw a rule-changing event. */
+static void tray_after_tick(const Pet *p,bool event)
+{
+    bool hidden=p->paused || p->clock_hold || (p->setup>=1 && p->setup<=7);
+    int want=hidden ? ROCK_TRAY_HIDDEN : tray_frame(p);
+    if (!event && want==tray_shown) return;
+    tray_sync(p,false);
+}
