@@ -16,7 +16,7 @@ enum Command wheel_command(WheelInput *in,const Ui *u,enum Control key,enum Phas
     }
     if (key==CLICK_MENU) {
         if (phase==PRESSED) { in->menu_down=true; in->menu_long=false; }
-        if (phase==REPEATED && in->menu_down && !in->menu_long) {
+        if (phase==REPEATED && in->menu_down && !in->menu_long && !ui_confirm_prompt(u->page)) {
             in->menu_long=true; return CMD_EXIT;
         }
         if (phase==RELEASED) {

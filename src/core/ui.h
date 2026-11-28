@@ -29,6 +29,7 @@ typedef struct {
     const char *message;
     Play play;
 } Ui;
+bool ui_confirm_prompt(enum Page page);
 void ui_start(Ui *u);
 void ui_command(Ui *u,Pet *p,enum Command cmd);
 void ui_growth(Ui *u,const Pet *p,unsigned previous);

@@ -54,15 +54,13 @@ int ui_count(const Ui *u,const Pet *p)
     case NOTEBOOK: return 6;
     case JOURNAL: return V3_COUNT-V3_TELETCHI_BOY;
     case MEMORIAL:return p->memorial_count;
-    case CLAIM: case DONATE_ASK:return 2;
     case SOUVENIRS:return 32;
     case SHOP_CODE:return 3;
     case PASSWORD: case DONATION:return 10;
     case LINEAGE: return p->family.count;
-    case OFFER: return 2;
     case HOME: return ICON_COUNT;
     case STATUS: return p->character==V3_LEGACY ? 7 : 11;
-    case FOOD: case TRAIN: case EXIT_ASK: case HATCH_ASK: case REPLACE_ASK: case INPUT_MODE: return 2;
+    case FOOD: case TRAIN: case INPUT_MODE: return 2;
     case ACTIV_MENU:return 5;
     case ITEMS:return owned_count(p,false,false);
     case OPTIONS: return 5;
@@ -226,6 +224,12 @@ static void confirm(Ui *u,Pet *p)
     }
 }
 
+bool ui_confirm_prompt(enum Page page)
+{
+    return page==EXIT_ASK || page==HATCH_ASK || page==REPLACE_ASK ||
+           page==DONATE_ASK || page==CLAIM || page==OFFER;
+}
+
 void ui_command(Ui *u,Pet *p,enum Command cmd)
 {
     if (cmd==CMD_NONE) return;
@@ -245,14 +249,15 @@ void ui_command(Ui *u,Pet *p,enum Command cmd)
         (cmd==CMD_LEFT || cmd==CMD_OK || cmd==CMD_RIGHT)) {
         u->choice=cmd==CMD_LEFT?0:cmd==CMD_OK?1:2;confirm(u,p);return;
     }
-    if (u->page==DONATE_ASK && (cmd==CMD_BACK || cmd==CMD_CANCEL)) u->amount=0;
-    if (cmd==CMD_EXIT) {
-        if (u->page!=EXIT_ASK) enter(u,EXIT_ASK);
+    if (ui_confirm_prompt(u->page)) {
+        /* Center answers yes and Menu no; the wheel does not answer. */
+        if (cmd==CMD_OK || cmd==CMD_BACK || cmd==CMD_CANCEL) {
+            u->choice=cmd==CMD_OK;
+            confirm(u,p);
+        }
         return;
     }
-    if (u->page==OFFER && (cmd==CMD_BACK || cmd==CMD_CANCEL)) {
-        family_answer(p,false);home(u);return;
-    }
+    if (cmd==CMD_EXIT) { enter(u,EXIT_ASK); return; }
     if (p->setup && u->page==HOME) {
         if (cmd==CMD_OK) setup_key(p,KEY_B);
         if (cmd==CMD_NEXT || cmd==CMD_PREV) setup_adjust(p,cmd==CMD_NEXT?1:-1);
